@@ -15,7 +15,8 @@ enum {
     playerOnLadder = RGFW_BIT(2),
     playerJump = RGFW_BIT(3),
     playerFall = RGFW_BIT(4),
-    playerDead = RGFW_BIT(5)
+    playerDead = RGFW_BIT(5),
+    playerWin = RGFW_BIT(6)
 };
 
 int main(void) {
@@ -26,7 +27,6 @@ int main(void) {
     srand(time(NULL));
     u32 frames = 0;
     double frameStartTime = RGFW_getTime();
-
     RGFW_rect player = RGFW_RECT(20, window->r.h - 52, 24, 28); 
     playerStateEnum playerState = 0;
     size_t jumpHeight = 0;
@@ -38,11 +38,13 @@ int main(void) {
     i8 thumbDir[9] = {1, 1, 1, 1, 1, 1, 1, 1};
     playerStateEnum thumbState[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
     size_t thumbCount = 0;
+    
+    i32 rayY = 70;
 
     while (RGFW_window_shouldClose(window) == RGFW_FALSE) {
         while (RGFW_window_checkEvent(window));
 
-        if (playerState != playerDead) {
+        if (playerState != playerDead && playerState != playerWin) {
             if (RGFW_isPressed(window, RGFW_left) && (playerState & playerOnLadder) == 0) {
                 player.x--;
                 player.w = -abs(player.w);
@@ -122,15 +124,21 @@ int main(void) {
             memset(thumbState, 0, sizeof(playerStateEnum) * 9);
 
             thumbCount = 0;
-        } else {
+            rayY = 70;
+        } else if (playerState == playerDead) {
             lonicSpriteIndex = 8; 
+        } else if (playerState == playerWin) {
+            rayY--;
         }
+
+        if (player.y <= 15)
+            playerState = playerWin;
 
         memcpy(window->buffer, map, window->r.w * window->r.h * 4);
 
-        drawSprite(window->buffer, window->r.w * 4, window->r.h, thumbSprite, 40, 70, 11, 15);
+        drawSprite(window->buffer, window->r.w * 4, window->r.h, thumbSprite, 40, rayY, 11, 15);
 
-        for (size_t i = 0; i < thumbCount; i++) {
+        for (size_t i = 0; i < thumbCount && playerState != playerWin; i++) {
             u32 thumb = drawSprite(window->buffer, window->r.w * 4, window->r.h, thumbSprite, thumbPoint[i].x, thumbPoint[i].y, 11, 15);
             switch (thumb) {
                 case 0x00:
@@ -158,68 +166,72 @@ int main(void) {
             thumbCount++;
         }
 
-        u32 ray = drawSprite(window->buffer, window->r.w * 4, window->r.h, raySprite, 60, 70, 32, 29);
+        u32 ray = drawSprite(window->buffer, window->r.w * 4, window->r.h, raySprite, 60, rayY, 32, 29);
     
         u32 topCollide = drawSprite(window->buffer, window->r.w * 4,  window->r.h,
                                     &lonicSpriteSheet[player.h * abs(player.w) * ((u32)lonicSpriteIndex) * 4], player.x, player.y, player.w, player.h - 10);
         
-         switch (topCollide) {
-            case 0x00: // nothing (probably in the air)
-                playerState &= ~playerAtLadder;
-                if (playerState & playerOnLadder)
-                    player.y -= 20;
-                playerState &= ~playerOnLadder;
+        if (playerState != playerDead && playerState != playerWin) {
+            switch (topCollide) {
+                case 0x00: // nothing (probably in the air)
+                    playerState &= ~playerAtLadder;
+                    if (playerState & playerOnLadder)
+                        player.y -= 20;
+                    playerState &= ~playerOnLadder;
 
-                if ((playerState & playerJump) == 0) // in the air but not jumping
-                    playerState |= playerFall;
-                break;
-            case 0xffffe300: // teal ladder
-                playerState |= playerAtLadder;
-                break;
-            case 0xff00d0ff: // thumb or ray
-                playerState = playerDead;
-                lonicSpriteIndex = 8; 
-                break; 
-            case 0xAB0000FF: // red floor/girder
-                if ((playerState & playerJump)) { // jumped and hit ladder, start falling
-                    playerState &= ~playerJump;
-                    playerState |= playerFall;
-                }
-                break; 
-            default: break;
+                    if ((playerState & playerJump) == 0) // in the air but not jumping
+                        playerState |= playerFall;
+                    break;
+                case 0xffffe300: // teal ladder
+                    playerState |= playerAtLadder;
+                    break;
+                case 0xff00d0ff: // thumb or ray
+                    playerState = playerDead;
+                    lonicSpriteIndex = 8; 
+                    break; 
+                case 0xAB0000FF: // red floor/girder
+                    if ((playerState & playerJump)) { // jumped and hit ladder, start falling
+                        playerState &= ~playerJump;
+                        playerState |= playerFall;
+                    }
+                    break; 
+                default: break;
+            }
         }
 
         u32 collide = drawSprite(window->buffer, window->r.w * 4,  window->r.h,
                                     &lonicSpriteSheet[(abs(player.w) * ((player.h * (u32)lonicSpriteIndex) + (player.h - 10)) ) * 4], player.x, player.y + (player.h - 10), player.w, 10);
 
-        switch (collide) {
-            case 0x00: // nothing (probably in the air)
-                if ((playerState & playerJump) == 0 && (playerState & playerOnLadder) == 0) // in the air but not jumping
-                    playerState |= playerFall;
-                break;
-            case 0xffffe300: // teal ladder
-                playerState |= playerAtLadder;
+        if (playerState != playerDead && playerState != playerWin) {  
+            switch (collide) {
+                case 0x00: // nothing (probably in the air)
+                    if ((playerState & playerJump) == 0 && (playerState & playerOnLadder) == 0) // in the air but not jumping
+                        playerState |= playerFall;
+                    break;
+                case 0xffffe300: // teal ladder
+                    playerState |= playerAtLadder;
 
-                if ((playerState & playerJump) == 0 && (playerState & playerOnLadder) == 0) // in the air but not jumping
-                    playerState |= playerFall;
-                break;
-            case 0xAB0000FF: // red floor/girder
-                //if ((playerState & playerAtLadder) == 0)  
-                  //  playerState &= ~playerOnLadder; // reached girder while on the latter
-                
-                if ((playerState & playerFall)) // fell onto ladder, stop falling
-                    playerState &= ~playerFall;
-                if ((playerState & playerJump)) { // jumped and hit ladder, start falling
-                    playerState &= ~playerJump;
-                    playerState |= playerFall;
-                }
-                break;
-            case 0xff03c1eb:
-                playerState = playerDead;
+                    if ((playerState & playerJump) == 0 && (playerState & playerOnLadder) == 0) // in the air but not jumping
+                        playerState |= playerFall;
+                    break;
+                case 0xAB0000FF: // red floor/girder
+                    //if ((playerState & playerAtLadder) == 0)  
+                      //  playerState &= ~playerOnLadder; // reached girder while on the latter
+                    
+                    if ((playerState & playerFall)) // fell onto ladder, stop falling
+                        playerState &= ~playerFall;
+                    if ((playerState & playerJump)) { // jumped and hit ladder, start falling
+                        playerState &= ~playerJump;
+                        playerState |= playerFall;
+                    }
+                    break;
+                case 0xff03c1eb:
+                    playerState = playerDead;
 
-                lonicSpriteIndex = 8; 
-                break;
-            default: printf("unhandled collision 0x%x\n", collide);
+                    lonicSpriteIndex = 8; 
+                    break;
+                default: break; 
+            }
         }
 
         RGFW_window_swapBuffers(window);

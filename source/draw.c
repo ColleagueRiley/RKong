@@ -19,14 +19,23 @@ u8* make_map(size_t w, size_t h) {
     float slopes[6] = {0.5, 0.5, 0.5, 0.5, 0.35, -0.005};
     u8 ladder[6] = {70, 80, 70, 80, 40, 0};
 
-    for (size_t i = 0; i < 6; i++) {
+    for (i32 i = -1; i < 6; i++) {
         size_t y = (100 + (i * 14) + (i * 75));
         assert((y + 14) <= h);
-        
+         
         size_t x = (i % 2) * 100; 
         if (i == 5) x = 0;
 
+
+        if (i == -1) {
+            y = 40;
+            x = 180;
+        }
+
         for (; x < w - 20; x += 20) {                
+            if (i == -1 && x > (280))
+                break;
+            
             size_t ladderX = 0;
             if ((i != 0 && i != 5) || x >= (w / 2))
                 y = y + (i * slopes[i]);
@@ -35,14 +44,18 @@ u8* make_map(size_t w, size_t h) {
                 
             if (i == 5) continue;
 
-            if (i % 2) { 
-                if (x != 120) continue;
+            if (i % 2) {
+                if (i == -1 && x != 260) continue;
+                else if (x != 120 && i != -1) continue;
             } else {
                 if (i != 5 && x >= w - 100) break;
                 if (x != w - 120) continue;          
             }
-
-            for (size_t y2 = y - 10; y2 < y + ladder[i]; y2 += 9) { 
+            
+            size_t ladderLength = ladder[i];
+            if (i == -1) ladderLength = 40; 
+                
+            for (size_t y2 = y - 10; y2 < y + ladderLength; y2 += 9) { 
                 drawSprite(buffer, w * 4, h, ladderSprite, x, y2, 24, 9);
             }
         }
