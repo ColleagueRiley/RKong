@@ -34,6 +34,7 @@ ifeq ($(detected_OS),Windows)
 	LIBS := -lgdi32 
 	EXT = .exe
 	OS_DIR = \\
+	LIBS += -mwindows
 endif
 ifeq ($(detected_OS),Darwin)        # Mac OS X
 	LIBS := -lm -framework Cocoa -framework IOKit $(STATIC)  -framework CoreVideo
@@ -49,18 +50,10 @@ endif
 
 ifneq (,$(filter $(CC),cl))
 	OS_DIR = \\
-
 endif
 
 ifneq (,$(filter $(CC),/opt/msvc/bin/x64/cl.exe /opt/msvc/bin/x86/cl.exe))
 	OS_DIR = /
-endif
-
-ifneq (,$(filter $(CC),cl /opt/msvc/bin/x64/cl.exe /opt/msvc/bin/x86/cl.exe))
-	WARNINGS =
-	STATIC = /static
-	LIBS = $(STATIC)
-	EXT = .exe
 endif
 
 LINK_GL1 = 
@@ -81,15 +74,24 @@ ifneq (,$(filter $(CC),emcc))
 endif
 
 LIBS += -I./include -lm
+OUTPUT_ARG = -o $(OUTPUT)$(EXT)
+
+ifneq (,$(filter $(CC),cl /opt/msvc/bin/x64/cl.exe /opt/msvc/bin/x86/cl.exe))
+	WARNINGS =
+	OUTPUT_ARG =
+	STATIC = /Fe:$(OUTPUT) /static /I include
+	LIBS = $(STATIC) /link /SUBSYSTEM:WINDOWS
+	EXT = .exe
+endif
 
 all: $(SRC) 
-	$(CC) $(SRC)  $(LINK_GL1) $(LIBS) -o $(OUTPUT)$(EXT)
+	$(CC) $(STATIC) $(SRC)  $(LINK_GL1) $(LIBS) $(OUTPUT_ARG)
 
 clean:
-	rm -f *.exe $(OUTPUT) *.o 
+	rm -f *.exe $(OUTPUT) *.o *.obj 
 
 debug: $(SRC) 
-	$(CC) $(SRC) $(LINK_GL1) $(LIBS) -D RGFW_DEBUG -o $(OUTPUT)$(EXT) 
+	$(CC) $(STATIC) $(SRC) $(LINK_GL1) $(LIBS) -D RGFW_DEBUG $(OUTPUT_ARG)
 ifeq (,$(filter $(CC),emcc))
 	.$(OS_DIR)$(OUTPUT)$(EXT)
 endif

@@ -19,6 +19,13 @@ enum {
     playerWin = RGFW_BIT(6)
 };
 
+#ifdef _MSC_VER
+int main(void);
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nShow) {
+    main();
+}
+#endif 
+
 int main(void) {
     RGFW_window* window = RGFW_createWindow("dk", RGFW_RECT(0, 0, 500, 570), RGFW_windowCenter | RGFW_windowNoResize);
     
