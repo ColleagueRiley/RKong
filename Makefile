@@ -8,6 +8,7 @@ WARNINGS = -Wall -Werror -Wextra
 OS_DIR = \\
 
 SRC = source/*.c
+OUTPUT = rkong
 
 ifneq (,$(filter $(CC),winegcc x86_64-w64-mingw32-gcc i686-w64-mingw32-gcc))
 	STATIC = --static
@@ -82,13 +83,13 @@ endif
 LIBS += -I./include -lm
 
 all: $(SRC) 
-	$(CC) $(SRC)  $(LINK_GL1) $(LIBS) -o rgfw_example$(EXT)
+	$(CC) $(SRC)  $(LINK_GL1) $(LIBS) -o $(OUTPUT)$(EXT)
 
 clean:
-	rm -f *.exe rgfw_example *.o 
+	rm -f *.exe $(OUTPUT) *.o 
 
 debug: $(SRC) 
-	$(CC) $(SRC) $(LINK_GL1) $(LIBS) -D RGFW_DEBUG -o rgfw_example$(EXT) 
+	$(CC) $(SRC) $(LINK_GL1) $(LIBS) -D RGFW_DEBUG -o $(OUTPUT)$(EXT) 
 ifeq (,$(filter $(CC),emcc))
-	.$(OS_DIR)rgfw_example$(EXT)
+	.$(OS_DIR)$(OUTPUT)$(EXT)
 endif
