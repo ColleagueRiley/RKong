@@ -1,4 +1,4 @@
-# Lonic vs RayKon | A Donkey Kong Clone
+# RKong | A Donkey Kong Clone
 A Donkey Kong clone featuring the beloved RSGL mascot, Lonic. Made using RGFW and software rendering.
 
 # goals 
